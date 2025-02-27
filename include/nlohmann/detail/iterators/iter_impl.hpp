@@ -1,3 +1,11 @@
+//     __ _____ _____ _____
+//  __|  |   __|     |   | |  JSON for Modern C++
+// |  |  |__   |  |  | | | |  version 3.11.3
+// |_____|_____|_____|_|___|  https://github.com/nlohmann/json
+//
+// SPDX-FileCopyrightText: 2013 - 2025 Niels Lohmann <https://nlohmann.me>
+// SPDX-License-Identifier: MIT
+
 #pragma once
 
 #include <iterator> // iterator, random_access_iterator_tag, bidirectional_iterator_tag, advance, next
@@ -11,10 +19,10 @@
 #include <nlohmann/detail/meta/type_traits.hpp>
 #include <nlohmann/detail/value_t.hpp>
 
-namespace nlohmann
-{
+NLOHMANN_JSON_NAMESPACE_BEGIN
 namespace detail
 {
+
 // forward declare, to be able to friend it later on
 template<typename IteratorType> class iteration_proxy;
 template<typename IteratorType> class iteration_proxy_value;
@@ -51,9 +59,12 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
     // make sure BasicJsonType is basic_json or const basic_json
     static_assert(is_basic_json<typename std::remove_const<BasicJsonType>::type>::value,
                   "iter_impl only accepts (const) basic_json");
+    // superficial check for the LegacyBidirectionalIterator named requirement
+    static_assert(std::is_base_of<std::bidirectional_iterator_tag, std::bidirectional_iterator_tag>::value
+                  &&  std::is_base_of<std::bidirectional_iterator_tag, typename std::iterator_traits<typename array_t::iterator>::iterator_category>::value,
+                  "basic_json iterator assumes array and object type iterators satisfy the LegacyBidirectionalIterator named requirement.");
 
   public:
-
     /// The std::iterator class template (used as a base class to provide typedefs) is deprecated in C++17.
     /// The C++ Standard has never required user-defined iterators to derive from std::iterator.
     /// A user-defined iterator should provide publicly accessible typedefs named
@@ -90,7 +101,7 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
     {
         JSON_ASSERT(m_object != nullptr);
 
-        switch (m_object->m_type)
+        switch (m_object->m_data.m_type)
         {
             case value_t::object:
             {
@@ -187,17 +198,17 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
     {
         JSON_ASSERT(m_object != nullptr);
 
-        switch (m_object->m_type)
+        switch (m_object->m_data.m_type)
         {
             case value_t::object:
             {
-                m_it.object_iterator = m_object->m_value.object->begin();
+                m_it.object_iterator = m_object->m_data.m_value.object->begin();
                 break;
             }
 
             case value_t::array:
             {
-                m_it.array_iterator = m_object->m_value.array->begin();
+                m_it.array_iterator = m_object->m_data.m_value.array->begin();
                 break;
             }
 
@@ -231,17 +242,17 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
     {
         JSON_ASSERT(m_object != nullptr);
 
-        switch (m_object->m_type)
+        switch (m_object->m_data.m_type)
         {
             case value_t::object:
             {
-                m_it.object_iterator = m_object->m_value.object->end();
+                m_it.object_iterator = m_object->m_data.m_value.object->end();
                 break;
             }
 
             case value_t::array:
             {
-                m_it.array_iterator = m_object->m_value.array->end();
+                m_it.array_iterator = m_object->m_data.m_value.array->end();
                 break;
             }
 
@@ -270,17 +281,17 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
     {
         JSON_ASSERT(m_object != nullptr);
 
-        switch (m_object->m_type)
+        switch (m_object->m_data.m_type)
         {
             case value_t::object:
             {
-                JSON_ASSERT(m_it.object_iterator != m_object->m_value.object->end());
+                JSON_ASSERT(m_it.object_iterator != m_object->m_data.m_value.object->end());
                 return m_it.object_iterator->second;
             }
 
             case value_t::array:
             {
-                JSON_ASSERT(m_it.array_iterator != m_object->m_value.array->end());
+                JSON_ASSERT(m_it.array_iterator != m_object->m_data.m_value.array->end());
                 return *m_it.array_iterator;
             }
 
@@ -314,17 +325,17 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
     {
         JSON_ASSERT(m_object != nullptr);
 
-        switch (m_object->m_type)
+        switch (m_object->m_data.m_type)
         {
             case value_t::object:
             {
-                JSON_ASSERT(m_it.object_iterator != m_object->m_value.object->end());
+                JSON_ASSERT(m_it.object_iterator != m_object->m_data.m_value.object->end());
                 return &(m_it.object_iterator->second);
             }
 
             case value_t::array:
             {
-                JSON_ASSERT(m_it.array_iterator != m_object->m_value.array->end());
+                JSON_ASSERT(m_it.array_iterator != m_object->m_data.m_value.array->end());
                 return &*m_it.array_iterator;
             }
 
@@ -367,7 +378,7 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
     {
         JSON_ASSERT(m_object != nullptr);
 
-        switch (m_object->m_type)
+        switch (m_object->m_data.m_type)
         {
             case value_t::object:
             {
@@ -418,7 +429,7 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
     {
         JSON_ASSERT(m_object != nullptr);
 
-        switch (m_object->m_type)
+        switch (m_object->m_data.m_type)
         {
             case value_t::object:
             {
@@ -452,7 +463,7 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
 
     /*!
     @brief comparison: equal
-    @pre The iterator is initialized; i.e. `m_object != nullptr`.
+    @pre (1) Both iterators are initialized to point to the same object, or (2) both iterators are value-initialized.
     */
     template < typename IterImpl, detail::enable_if_t < (std::is_same<IterImpl, iter_impl>::value || std::is_same<IterImpl, other_iter_impl>::value), std::nullptr_t > = nullptr >
     bool operator==(const IterImpl& other) const
@@ -463,9 +474,13 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
             JSON_THROW(invalid_iterator::create(212, "cannot compare iterators of different containers", m_object));
         }
 
-        JSON_ASSERT(m_object != nullptr);
+        // value-initialized forward iterators can be compared, and must compare equal to other value-initialized iterators of the same type #4493
+        if (m_object == nullptr)
+        {
+            return true;
+        }
 
-        switch (m_object->m_type)
+        switch (m_object->m_data.m_type)
         {
             case value_t::object:
                 return (m_it.object_iterator == other.m_it.object_iterator);
@@ -488,7 +503,7 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
 
     /*!
     @brief comparison: not equal
-    @pre The iterator is initialized; i.e. `m_object != nullptr`.
+    @pre (1) Both iterators are initialized to point to the same object, or (2) both iterators are value-initialized.
     */
     template < typename IterImpl, detail::enable_if_t < (std::is_same<IterImpl, iter_impl>::value || std::is_same<IterImpl, other_iter_impl>::value), std::nullptr_t > = nullptr >
     bool operator!=(const IterImpl& other) const
@@ -498,7 +513,7 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
 
     /*!
     @brief comparison: smaller
-    @pre The iterator is initialized; i.e. `m_object != nullptr`.
+    @pre (1) Both iterators are initialized to point to the same object, or (2) both iterators are value-initialized.
     */
     bool operator<(const iter_impl& other) const
     {
@@ -508,9 +523,14 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
             JSON_THROW(invalid_iterator::create(212, "cannot compare iterators of different containers", m_object));
         }
 
-        JSON_ASSERT(m_object != nullptr);
+        // value-initialized forward iterators can be compared, and must compare equal to other value-initialized iterators of the same type #4493
+        if (m_object == nullptr)
+        {
+            // the iterators are both value-initialized and are to be considered equal, but this function checks for smaller, so we return false
+            return false;
+        }
 
-        switch (m_object->m_type)
+        switch (m_object->m_data.m_type)
         {
             case value_t::object:
                 JSON_THROW(invalid_iterator::create(213, "cannot compare order of object iterators", m_object));
@@ -533,7 +553,7 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
 
     /*!
     @brief comparison: less than or equal
-    @pre The iterator is initialized; i.e. `m_object != nullptr`.
+    @pre (1) Both iterators are initialized to point to the same object, or (2) both iterators are value-initialized.
     */
     bool operator<=(const iter_impl& other) const
     {
@@ -542,7 +562,7 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
 
     /*!
     @brief comparison: greater than
-    @pre The iterator is initialized; i.e. `m_object != nullptr`.
+    @pre (1) Both iterators are initialized to point to the same object, or (2) both iterators are value-initialized.
     */
     bool operator>(const iter_impl& other) const
     {
@@ -551,7 +571,7 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
 
     /*!
     @brief comparison: greater than or equal
-    @pre The iterator is initialized; i.e. `m_object != nullptr`.
+    @pre (1) The iterator is initialized; i.e. `m_object != nullptr`, or (2) both iterators are value-initialized.
     */
     bool operator>=(const iter_impl& other) const
     {
@@ -566,7 +586,7 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
     {
         JSON_ASSERT(m_object != nullptr);
 
-        switch (m_object->m_type)
+        switch (m_object->m_data.m_type)
         {
             case value_t::object:
                 JSON_THROW(invalid_iterator::create(209, "cannot use offsets with object iterators", m_object));
@@ -645,7 +665,7 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
     {
         JSON_ASSERT(m_object != nullptr);
 
-        switch (m_object->m_type)
+        switch (m_object->m_data.m_type)
         {
             case value_t::object:
                 JSON_THROW(invalid_iterator::create(209, "cannot use offsets with object iterators", m_object));
@@ -674,7 +694,7 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
     {
         JSON_ASSERT(m_object != nullptr);
 
-        switch (m_object->m_type)
+        switch (m_object->m_data.m_type)
         {
             case value_t::object:
                 JSON_THROW(invalid_iterator::create(208, "cannot use operator[] for object iterators", m_object));
@@ -735,5 +755,6 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
     /// the actual iterator of the associated instance
     internal_iterator<typename std::remove_const<BasicJsonType>::type> m_it {};
 };
-} // namespace detail
-} // namespace nlohmann
+
+}  // namespace detail
+NLOHMANN_JSON_NAMESPACE_END
